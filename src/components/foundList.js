@@ -1,13 +1,17 @@
 import { formatDate } from '../utils.js';
 
+const ITEMS_PER_PAGE = 6;
+
 export function renderFoundList(container, { items, isAdmin, onEdit, onDelete, onViewDetail, onOpenForm }) {
   // Setup filters state
   let searchQuery = '';
   let selectedCategory = '';
   let selectedStatus = '';
+  let currentPage = 1;
 
   const renderCards = () => {
     const grid = container.querySelector('#found-cards-grid');
+    const paginationContainer = container.querySelector('#found-pagination');
     if (!grid) return;
 
     // Filter items
@@ -22,6 +26,12 @@ export function renderFoundList(container, { items, isAdmin, onEdit, onDelete, o
       return matchSearch && matchCategory && matchStatus;
     });
 
+    // Pagination
+    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+    if (currentPage > totalPages) currentPage = totalPages;
+    const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paged = filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+
     if (filtered.length === 0) {
       grid.innerHTML = `
         <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--text-muted);">
@@ -32,10 +42,11 @@ export function renderFoundList(container, { items, isAdmin, onEdit, onDelete, o
           <p>검색 조건에 맞는 습득물이 없습니다.</p>
         </div>
       `;
+      if (paginationContainer) paginationContainer.innerHTML = '';
       return;
     }
 
-    grid.innerHTML = filtered.map(item => {
+    grid.innerHTML = paged.map(item => {
       const statusBadgeClass = item.status === '보관중' ? 'badge-status-keep' : 'badge-status-claimed';
       
       // Use loaded Base64 image or modern SVG fallback
@@ -117,6 +128,46 @@ export function renderFoundList(container, { items, isAdmin, onEdit, onDelete, o
         });
       });
     }
+
+    // Render pagination
+    if (paginationContainer) {
+      if (totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+      }
+
+      let paginationHtml = `
+        <button class="page-btn ${currentPage === 1 ? 'disabled' : ''}" data-page="prev" ${currentPage === 1 ? 'disabled' : ''}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+      `;
+
+      for (let i = 1; i <= totalPages; i++) {
+        paginationHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+      }
+
+      paginationHtml += `
+        <button class="page-btn ${currentPage === totalPages ? 'disabled' : ''}" data-page="next" ${currentPage === totalPages ? 'disabled' : ''}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      `;
+
+      paginationContainer.innerHTML = paginationHtml;
+
+      paginationContainer.querySelectorAll('.page-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const page = btn.dataset.page;
+          if (page === 'prev' && currentPage > 1) {
+            currentPage--;
+          } else if (page === 'next' && currentPage < totalPages) {
+            currentPage++;
+          } else if (page !== 'prev' && page !== 'next') {
+            currentPage = parseInt(page);
+          }
+          renderCards();
+        });
+      });
+    }
   };
 
   // Render container structure
@@ -152,6 +203,9 @@ export function renderFoundList(container, { items, isAdmin, onEdit, onDelete, o
 
     <!-- Cards container -->
     <div class="cards-grid" id="found-cards-grid"></div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="found-pagination"></div>
   `;
 
   // Filter event listeners
@@ -162,16 +216,19 @@ export function renderFoundList(container, { items, isAdmin, onEdit, onDelete, o
 
   searchInput.addEventListener('input', (e) => {
     searchQuery = e.target.value;
+    currentPage = 1;
     renderCards();
   });
 
   categoryFilter.addEventListener('change', (e) => {
     selectedCategory = e.target.value;
+    currentPage = 1;
     renderCards();
   });
 
   statusFilter.addEventListener('change', (e) => {
     selectedStatus = e.target.value;
+    currentPage = 1;
     renderCards();
   });
 

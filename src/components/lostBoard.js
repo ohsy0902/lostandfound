@@ -1,10 +1,14 @@
 import { maskContact, maskName, formatDate, showToast, fileToBase64 } from '../utils.js';
 
+const ITEMS_PER_PAGE = 8;
+
 export function renderLostBoard(container, { items, isAdmin, onEdit, onDelete, onViewDetail, onOpenForm }) {
   let searchQuery = '';
+  let currentPage = 1;
 
   const renderTableRows = () => {
     const listContainer = container.querySelector('#lost-list-container');
+    const paginationContainer = container.querySelector('#lost-pagination');
     if (!listContainer) return;
 
     const filtered = items.filter(item => 
@@ -13,6 +17,12 @@ export function renderLostBoard(container, { items, isAdmin, onEdit, onDelete, o
       item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.ownerName.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    // Pagination
+    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+    if (currentPage > totalPages) currentPage = totalPages;
+    const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paged = filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
     if (filtered.length === 0) {
       listContainer.innerHTML = `
@@ -24,10 +34,11 @@ export function renderLostBoard(container, { items, isAdmin, onEdit, onDelete, o
           <p>등록된 분실신고 내역이 없습니다.</p>
         </div>
       `;
+      if (paginationContainer) paginationContainer.innerHTML = '';
       return;
     }
 
-    listContainer.innerHTML = filtered.map(item => {
+    listContainer.innerHTML = paged.map(item => {
       // Masking contact & owner name if not admin
       const displayName = isAdmin ? item.ownerName : maskName(item.ownerName);
       const displayContact = isAdmin ? item.contact : maskContact(item.contact);
@@ -85,6 +96,45 @@ export function renderLostBoard(container, { items, isAdmin, onEdit, onDelete, o
         });
       });
     }
+
+    // Render pagination
+    if (paginationContainer) {
+      if (totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+      } else {
+        let paginationHtml = `
+          <button class="page-btn ${currentPage === 1 ? 'disabled' : ''}" data-page="prev" ${currentPage === 1 ? 'disabled' : ''}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+        `;
+
+        for (let i = 1; i <= totalPages; i++) {
+          paginationHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+        }
+
+        paginationHtml += `
+          <button class="page-btn ${currentPage === totalPages ? 'disabled' : ''}" data-page="next" ${currentPage === totalPages ? 'disabled' : ''}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        `;
+
+        paginationContainer.innerHTML = paginationHtml;
+
+        paginationContainer.querySelectorAll('.page-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const page = btn.dataset.page;
+            if (page === 'prev' && currentPage > 1) {
+              currentPage--;
+            } else if (page === 'next' && currentPage < totalPages) {
+              currentPage++;
+            } else if (page !== 'prev' && page !== 'next') {
+              currentPage = parseInt(page);
+            }
+            renderTableRows();
+          });
+        });
+      }
+    }
   };
 
   container.innerHTML = `
@@ -114,6 +164,9 @@ export function renderLostBoard(container, { items, isAdmin, onEdit, onDelete, o
       </div>
       <div id="lost-list-container" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
     </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="lost-pagination"></div>
   `;
 
   // Hook elements
@@ -122,6 +175,7 @@ export function renderLostBoard(container, { items, isAdmin, onEdit, onDelete, o
 
   searchInput.addEventListener('input', (e) => {
     searchQuery = e.target.value;
+    currentPage = 1;
     renderTableRows();
   });
 
