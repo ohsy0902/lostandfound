@@ -654,6 +654,10 @@ header {
   transition: all var(--transition-speed);
 }
 
+.lost-item-row > div {
+  min-width: 0; /* Prevents grid cell overflow */
+}
+
 .lost-item-row:hover {
   transform: translateX(4px);
   border-color: rgba(var(--accent-rgb), 0.3);
@@ -664,6 +668,7 @@ header {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 .lost-item-title {
@@ -671,6 +676,9 @@ header {
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lost-item-title:hover {
@@ -688,11 +696,17 @@ header {
 .lost-item-meta {
   font-size: 0.9rem;
   color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lost-item-contact {
   font-weight: 500;
   color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .board-header-row {
@@ -708,6 +722,13 @@ header {
   letter-spacing: 0.05em;
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
+}
+
+.board-header-row > div {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (max-width: 768px) {

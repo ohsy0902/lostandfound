@@ -3,8 +3,7 @@ export function renderHeader(container, { isAdmin }) {
     <header class="glass-panel">
       <div class="logo-section">
         <h1>
-          <span>경찰청 유실물 통합 포털</span>
-          <span class="logo-badge">민원 24</span>
+          <span>Lost in 가온</span>
         </h1>
       </div>
       <div class="header-actions">

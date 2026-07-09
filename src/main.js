@@ -287,7 +287,7 @@ function openDetailModal(type, item) {
       </div>
     `;
 
-  const imageSectionHtml = (isFound && item.image) 
+  const imageSectionHtml = item.image 
     ? `
       <div class="detail-img-wrapper">
         <img src="${item.image}" alt="${item.title}">

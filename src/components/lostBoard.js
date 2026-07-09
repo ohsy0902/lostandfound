@@ -1,4 +1,4 @@
-import { maskContact, maskName, formatDate, showToast } from '../utils.js';
+import { maskContact, maskName, formatDate, showToast, fileToBase64 } from '../utils.js';
 
 export function renderLostBoard(container, { items, isAdmin, onEdit, onDelete, onViewDetail, onOpenForm }) {
   let searchQuery = '';
@@ -191,6 +191,24 @@ export function openLostFormModal({ item, onSave }) {
             <label for="lost-description">상세 설명</label>
             <textarea id="lost-description" class="form-control" rows="4" placeholder="물건의 색상, 잃어버린 상황, 특징을 상세히 설명해 주세요.">${item?.description || ''}</textarea>
           </div>
+
+          <div class="form-group">
+            <label>분실물 사진 (선택)</label>
+            <div class="image-upload-area" id="lost-image-upload-dropzone">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted);">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              <span>클릭하여 사진 추가 (또는 파일 드래그)</span>
+              <input type="file" id="lost-image-file" accept="image/*" style="display: none;">
+            </div>
+            
+            <div class="image-preview-container" id="lost-image-preview-box" style="${item?.image ? 'display: block;' : ''}">
+              <img id="lost-image-preview" src="${item?.image || ''}" alt="Preview">
+              <button type="button" class="remove-img-btn" id="lost-remove-image-btn">&times;</button>
+            </div>
+          </div>
         </form>
       </div>
       <div class="modal-footer">
@@ -217,6 +235,62 @@ export function openLostFormModal({ item, onSave }) {
     }
   });
 
+  // Image Upload Logic
+  let base64Image = item?.image || '';
+  const dropzone = backdrop.querySelector('#lost-image-upload-dropzone');
+  const fileInput = backdrop.querySelector('#lost-image-file');
+  const previewBox = backdrop.querySelector('#lost-image-preview-box');
+  const previewImg = backdrop.querySelector('#lost-image-preview');
+  const removeImgBtn = backdrop.querySelector('#lost-remove-image-btn');
+
+  dropzone.addEventListener('click', () => fileInput.click());
+
+  const handleFile = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('이미지 파일만 업로드할 수 있습니다.', 'error');
+      return;
+    }
+
+    try {
+      base64Image = await fileToBase64(file);
+      previewImg.src = base64Image;
+      previewBox.style.display = 'block';
+    } catch (err) {
+      console.error(err);
+      showToast('이미지 파일 변환에 실패했습니다.', 'error');
+    }
+  };
+
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    handleFile(file);
+  });
+
+  dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.style.borderColor = 'var(--accent)';
+  });
+
+  dropzone.addEventListener('dragleave', () => {
+    dropzone.style.borderColor = 'var(--border-color)';
+  });
+
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.style.borderColor = 'var(--border-color)';
+    const file = e.dataTransfer.files[0];
+    handleFile(file);
+  });
+
+  removeImgBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    base64Image = '';
+    previewImg.src = '';
+    previewBox.style.display = 'none';
+    fileInput.value = '';
+  });
+
   const form = backdrop.querySelector('#lost-form');
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -228,7 +302,8 @@ export function openLostFormModal({ item, onSave }) {
       lostLocation: form.querySelector('#lost-location').value.trim(),
       ownerName: form.querySelector('#lost-owner').value.trim(),
       contact: form.querySelector('#lost-contact').value.trim(),
-      description: form.querySelector('#lost-description').value.trim()
+      description: form.querySelector('#lost-description').value.trim(),
+      image: base64Image
     };
 
     onSave(data);
